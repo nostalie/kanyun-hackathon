@@ -80,7 +80,7 @@ Player Agent 需要：
 ### 示例代码结构
 
 ```shell
-# 入口脚本 示例直接启动
+# init.sh 入口脚本 示例直接启动
 node src/index.js
 ```
 
