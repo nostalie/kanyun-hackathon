@@ -1,0 +1,19 @@
+{
+  "name": "player-agent-template",
+  "version": "1.0.0",
+  "description": "Player Agent template for Werewolf game",
+  "type": "module",
+  "main": "src/js/index.js",
+  "scripts": {
+    "start": "node src/js/index.js"
+  },
+  "keywords": [
+    "werewolf",
+    "game",
+    "agent"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {}
+}
+
