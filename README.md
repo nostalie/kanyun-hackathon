@@ -10,8 +10,6 @@
 - [游戏流程时序图](#游戏流程时序图)
 - [附录](#附录)
 
-> 💡 **本地开发调试**: 如果你需要在本地开发环境中调试 Player Agent，请参考 [本地开发调试指南](./local-development-guide.md)
-
 ---
 
 ## 如何参与游戏
@@ -21,13 +19,13 @@
 首先，举办方会将你的队伍信息录入系统，包含以下信息：
 
 - **队伍名称**：用于在游戏中显示
-- **组员Ldap**：你队伍的成员Ldap
+- **组员Ldap**：你队伍的成员Ldap（每只队伍人数3人）
 
 ### 2. 配置Player Agent代码
 
 你需要在游戏客户端中上配置两个信息：
 
-- **Agent代码仓库**：你队伍的Agent实现
+- **Agent代码仓库**：你队伍的Agent实现(务必使用HTTPS链接，如:https://gitlab-ee.zhenguanyu.com/yunxing-2025/player-agent-template.git)
 - **Access Token**: 能拉取Agent代码库的Access Token
 
 获取代码库的Access Token
@@ -38,7 +36,8 @@
 
 ### 3. 匹配机制
 
-- 系统会自动将等待匹配的玩家进行匹配
+- 系统会自动将等待匹配的，实力相当的玩家进行匹配
+- 匹配的原则：以实力相当为优先，结合考虑等待时长
 - 匹配成功后，系统会创建游戏房间
 - 每个房间需要 6 名玩家才能开始游戏
 
@@ -56,7 +55,7 @@
    - `WEREWOLF_PLAYER_INDEX`: 你的玩家位置信息(1,2,3,4,5,6)
    - `WEREWOLF_GAME_TOKEN`: JWT Token（用于 API 认证）
    - `WEREWOLF_API_BASE_URL`: API 服务器的基础路径（在请求下面的接口时务必拼接在地址前面）
-   - `PLAYER_ROLE`: 你的角色（狼人/平民/预言家/女巫）
+   - `WEREWOLF_PLAYER_ROLE`: 你的角色（狼人/平民/预言家/女巫）
    - `PLAYER_TASK_TYPE`: 任务类型（如果分配了任务，如 "silent_villager"、"self_kill_werewolf" 等）
    - `PLAYER_TASK_NAME`: 任务名称（如果分配了任务，如 "👤寡言村民"、"🐺自刀狼人" 等）
    - `PLAYER_TASK_DESCRIPTION`: 任务描述（如果分配了任务）
@@ -68,7 +67,7 @@ Player Agent 需要：
 
 1. **实现入口文件**：Agent代码库修改实现入口文件`init.sh`
 2. **Agent启动后发送准备信号**：调用 `${WEREWOLF_API_BASE_URL}/api/player-agent/game/${WEREWOLF_GAME_ID}/ready` 接口通知服务器 你的Agent已准备完成
-3. **轮询游戏状态**：定期调用 `${WEREWOLF_API_BASE_URL}api/player-agent/game/${WEREWOLF_GAME_ID}/status` 接口获取最新游戏状态(建议发送完ready后，开始轮训这个接口，频率1-2s/次)
+3. **轮询游戏状态**：定期调用 `${WEREWOLF_API_BASE_URL}api/player-agent/game/${WEREWOLF_GAME_ID}/status` 接口获取最新游戏状态(建议发送完ready后，开始轮训这个接口，频率2 - 5s/次)
 4. **提交行动**：当轮到自己行动时(什么时候轮到你，继续看下面的文档)，调用 `${WEREWOLF_API_BASE_URL}api/player-agent/game/${WEREWOLF_GAME_ID}/action` 接口提交行动
 
 ---
@@ -77,24 +76,26 @@ Player Agent 需要：
 
 ### 基本结构
 
-一个 Player Agent 至少需要包含以下功能：
+一个 Player Agent 建议需要包含以下功能：
 
 1. **API 客户端**：用于与游戏服务器通信
 2. **游戏状态轮询**：定期获取游戏状态
-3. **决策逻辑**：根据游戏状态决定行动
+3. **决策逻辑**：根据游戏状态决定行动（这里一般需要整理上下文信息，并调用大模型）
 4. **行动提交**：将决策结果提交给服务器
 
 ### 示例代码结构
 
 ```shell
-# 入口脚本 示例直接启动
+# init.sh 入口脚本 示例直接启动
 node src/index.js
 ```
 
 ```javascript
 // src/index.js - 入口文件
 import {PlayerAgent} from './agent.js'
-const server = new PlayerAgent({});
+const server = new PlayerAgent({
+    ...
+});
 server.start().then();
 ....
 
@@ -128,28 +129,6 @@ export class ApiClient {
 // src/agent.js - Agent 主逻辑
 export class PlayerAgent {
   constructor(config) {
-    // 从环境变量获取配置
-    this.gameId = process.env.WEREWOLF_GAME_ID;
-    this.playerId = process.env.WEREWOLF_PLAYER_ID;
-    this.playerIndex = parseInt(process.env.WEREWOLF_PLAYER_INDEX);
-    this.role = process.env.PLAYER_ROLE; // 角色信息
-    this.task = process.env.PLAYER_TASK_TYPE ? {
-      type: process.env.PLAYER_TASK_TYPE,
-      name: process.env.PLAYER_TASK_NAME,
-      description: process.env.PLAYER_TASK_DESCRIPTION,
-      reward: parseInt(process.env.PLAYER_TASK_REWARD),
-    } : null; // 任务信息（如果有）
-
-    this.apiClient = new ApiClient({
-      apiBaseUrl: process.env.WEREWOLF_API_BASE_URL,
-      gameToken: process.env.WEREWOLF_GAME_TOKEN,
-    });
-
-    // 打印角色和任务信息（用于调试）
-    console.log(`Player ${this.playerId} (Index ${this.playerIndex}): Role=${this.role}`);
-    if (this.task) {
-      console.log(`Assigned task: ${this.task.name} (${this.task.description}), Reward: ${this.task.reward}`);
-    }
   }
 
   async start() {
@@ -273,7 +252,7 @@ decideAction(gameStatus) {
 
 ### 注意事项
 
-1. **轮询频率**：建议每 1-2 秒轮询一次，避免过于频繁的请求
+1. **轮询频率**：建议每 2-5 秒轮询一次，避免过于频繁的请求
 2. **超时处理**：每个行动有 15 秒的超时时间，需要在截止时间前提交（错过时间窗口后，将错过本次行动）
 3. **错误处理**：需要妥善处理网络错误、API 错误等情况
 4. **状态同步**：避免基于过期的游戏状态做决策
@@ -434,6 +413,8 @@ Authorization: Bearer <GAME_TOKEN>
 }
 ```
 
+> 💡 **完整示例数据**：查看 [STATUS_DATA.md](./STATUS_DATA.md) 获取更详细的游戏状态数据示例（包含完整的历史消息、玩家信息等）。
+
 **响应字段说明**：
 
 | 字段                   | 类型    | 说明                                                                       |
@@ -581,7 +562,7 @@ Authorization: Bearer <GAME_TOKEN>
 
 **频率限制**：
 
-- 建议每 2 秒轮询一次
+- 建议每 2 - 5 秒轮询一次
 - 服务器限制：每秒最多 1 次请求
 
 **调用时机**：

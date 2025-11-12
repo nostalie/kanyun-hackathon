@@ -1,230 +1,133 @@
 /**
- * 决策策略 - 根据游戏状态决定行动
+ * 游戏策略
+ *
+ * 根据不同的角色和阶段做出决策
  */
-export class Strategy {
+
+import { LLMClient } from "./llm-client.js";
+import { buildLLMMessages } from "./context-builder.js";
+
+/**
+ * 游戏策略类
+ */
+export class GameStrategy {
+  /**
+   * @param {Object} [config] - 配置选项
+   * @param {string} [config.apiKey] - LLM API Key
+   * @param {string} [config.modelName] - LLM 模型名称
+   * @param {string} [config.apiUrl] - LLM API 地址
+   */
+  constructor(config = {}) {
+    this.playerIndex = config.playerIndex;
+    this.playerRole = config.playerRole;
+    this.task = config.task;
+    this.apiKey = config.apiKey;
+    this.modelName = config.modelName;
+    this.apiUrl = config.apiUrl;
+
+    // 如果配置了 API Key，创建 LLM 客户端
+    if (this.apiKey) {
+      this.llmClient = new LLMClient({
+        apiKey: this.apiKey,
+        modelName: this.modelName,
+        apiUrl: this.apiUrl,
+      });
+      console.log(`[策略] LLM 客户端已初始化: ${this.modelName}`);
+    } else {
+      console.log(`[策略] ⚠ 未配置 LLM_API_KEY，将使用随机策略`);
+      this.llmClient = null;
+    }
+  }
+
   /**
    * 根据游戏状态决定行动
+   * @param gameStatus - 游戏状态
+   * @returns {Promise<Object|null>} 行动数据，如果不需要行动返回 null
    */
-  static decideAction(gameStatus) {
-    const { myTurn, myRole, myPlayerIndex, alivePlayerIndexes } = gameStatus;
+  async decideAction(gameStatus) {
+    const { myTurn } = gameStatus;
 
-    if (!myTurn || !myTurn.canAct) {
+    if (!myTurn.canAct) {
       return null;
     }
 
     const { actionType, actionContext } = myTurn;
 
-    switch (actionType) {
-      case "kill":
-        return Strategy.handleKill(actionContext, alivePlayerIndexes);
+    console.log(`[策略] 角色: ${this.playerRole}, 行动类型: ${actionType}`);
 
-      case "check":
-        return Strategy.handleCheck(actionContext);
-
-      case "witch_action":
-        return Strategy.handleWitchAction(actionContext, gameStatus);
-
-      case "last_words":
-        return Strategy.handleLastWords();
-
-      case "speech":
-        return Strategy.handleSpeech(gameStatus);
-
-      case "vote":
-        return Strategy.handleVote(actionContext);
-
-      case "pk_speech":
-        return Strategy.handlePkSpeech(actionContext);
-
-      case "pk_vote":
-        return Strategy.handlePkVote(actionContext);
-
-      case "skip":
-        return Strategy.handleSkip();
-
-      default:
-        console.warn(`Unknown action type: ${actionType}`);
-        return null;
-    }
-  }
-
-  /**
-   * 处理狼人杀人
-   */
-  static handleKill(actionContext, alivePlayerIndexes) {
-    const { availableTargets, teammates } = actionContext;
-
-    // 随机选择一个非狼人玩家
-    const nonWolfPlayers = availableTargets.filter(
-      (idx) => !teammates.includes(idx)
-    );
-
-    if (nonWolfPlayers.length === 0) {
-      // 如果没有非狼人玩家，随机选择一个
-      const randomIndex = Math.floor(Math.random() * availableTargets.length);
-      return {
-        actionType: "kill",
-        target: availableTargets[randomIndex],
-      };
-    }
-
-    const randomIndex = Math.floor(Math.random() * nonWolfPlayers.length);
-    return {
-      actionType: "kill",
-      target: nonWolfPlayers[randomIndex],
-    };
-  }
-
-  /**
-   * 处理预言家验人
-   */
-  static handleCheck(actionContext) {
-    const { availableTargets } = actionContext;
-
-    if (availableTargets.length === 0) {
+    try {
+      return await this.decideWithLLM(gameStatus, actionContext);
+    } catch (error) {
+      console.error(`[策略] LLM 决策失败: ${error.message}`);
+      // 这里可以进行一定的兜底逻辑，比如随机策略等
       return null;
     }
-
-    // 随机选择一个玩家进行查验
-    const randomIndex = Math.floor(Math.random() * availableTargets.length);
-    return {
-      actionType: "check",
-      target: availableTargets[randomIndex],
-    };
   }
 
   /**
-   * 处理女巫行动
+   * 使用 LLM 进行决策
+   * @param {import('./types.js').GameStatus} gameStatus - 游戏状态
+   * @param {import('./types.js').ActionContext} actionContext - 行动上下文
+   * @returns {Promise<Object>} 行动数据
    */
-  static handleWitchAction(actionContext, gameStatus) {
-    const {
-      killedPlayer,
-      hasHealPotion,
-      hasPoisonPotion,
-      availablePoisonTargets,
-    } = actionContext;
+  async decideWithLLM(gameStatus, actionContext) {
+    console.log(`[策略] 🤖 使用 LLM 进行决策...`);
 
-    // 如果有人被杀且有解药，优先救人
-    if (killedPlayer && hasHealPotion) {
-      return {
-        actionType: "witch_action",
-        action: "heal",
-      };
+    // 构建 LLM 消息
+    const messages = buildLLMMessages(gameStatus, actionContext, this.task);
+
+    // 调用 LLM
+    const response = await this.llmClient.chat(messages);
+
+    // 解析 LLM 响应
+    const action = this.parseLLMResponse(response, actionContext.actionType);
+
+    if (!action) {
+      throw new Error("无法解析 LLM 响应");
     }
 
-    // 如果有毒药，随机毒一个人（简单策略）
-    if (
-      hasPoisonPotion &&
-      availablePoisonTargets &&
-      availablePoisonTargets.length > 0
-    ) {
-      const randomIndex = Math.floor(
-        Math.random() * availablePoisonTargets.length
-      );
-      return {
-        actionType: "witch_action",
-        action: "poison",
-        target: availablePoisonTargets[randomIndex],
-      };
+    console.log(`[策略] ✓ LLM 决策完成:`, JSON.stringify(action, null, 2));
+    return action;
+  }
+
+  /**
+   * 解析 LLM 响应
+   * @param {string} response - LLM 响应文本
+   * @param {string} expectedActionType - 期望的行动类型
+   * @returns {Object|null} 解析后的行动对象
+   */
+  parseLLMResponse(response, expectedActionType) {
+    try {
+      // 尝试提取 JSON
+      let jsonStr = response.trim();
+
+      // 如果响应包含代码块，提取 JSON
+      const jsonMatch = jsonStr.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+      if (jsonMatch) {
+        jsonStr = jsonMatch[1];
+      } else {
+        // 尝试直接查找 JSON 对象
+        const jsonObjMatch = jsonStr.match(/\{[\s\S]*\}/);
+        if (jsonObjMatch) {
+          jsonStr = jsonObjMatch[0];
+        }
+      }
+
+      const parsed = JSON.parse(jsonStr);
+
+      // 验证 actionType
+      if (parsed.actionType !== expectedActionType) {
+        console.warn(
+          `[策略] ⚠ LLM 返回的 actionType (${parsed.actionType}) 与期望的 (${expectedActionType}) 不匹配，使用期望的类型`
+        );
+        parsed.actionType = expectedActionType;
+      }
+
+      return parsed;
+    } catch (error) {
+      console.error(`[策略] ❌ 解析 LLM 响应失败: ${error.message}`);
+      console.error(`[策略] 原始响应: ${response.substring(0, 500)}`);
+      return null;
     }
-
-    // 否则跳过
-    return {
-      actionType: "witch_action",
-      action: "skip",
-    };
-  }
-
-  /**
-   * 处理遗言
-   */
-  static handleLastWords() {
-    return {
-      actionType: "last_words",
-      content: "我是好人，过。",
-    };
-  }
-
-  /**
-   * 处理发言
-   */
-  static handleSpeech(gameStatus) {
-    const { myRole, myPlayerIndex } = gameStatus;
-
-    // 根据角色决定发言内容
-    if (myRole === "WEREWOLF") {
-      return {
-        actionType: "speech",
-        content: `我是${myPlayerIndex}号，我是好人，过。`,
-      };
-    } else {
-      return {
-        actionType: "speech",
-        content: `我是${myPlayerIndex}号，我是好人，请大家相信我。`,
-      };
-    }
-  }
-
-  /**
-   * 处理投票
-   */
-  static handleVote(actionContext) {
-    const { availableTargets } = actionContext;
-
-    if (availableTargets.length === 0) {
-      return {
-        actionType: "vote",
-        target: null, // 弃票
-      };
-    }
-
-    // 随机投票（简单策略）
-    const randomIndex = Math.floor(Math.random() * availableTargets.length);
-    return {
-      actionType: "vote",
-      target: availableTargets[randomIndex],
-    };
-  }
-
-  /**
-   * 处理 PK 发言
-   */
-  static handlePkSpeech(actionContext) {
-    const { pkCandidates } = actionContext;
-    return {
-      actionType: "pk_speech",
-      content: `我认为${pkCandidates.join(
-        "号、"
-      )}号中可能有狼人，请大家仔细分析。`,
-    };
-  }
-
-  /**
-   * 处理 PK 投票
-   */
-  static handlePkVote(actionContext) {
-    const { pkCandidates } = actionContext;
-
-    if (pkCandidates.length === 0) {
-      return {
-        actionType: "pk_vote",
-        target: null,
-      };
-    }
-
-    const randomIndex = Math.floor(Math.random() * pkCandidates.length);
-    return {
-      actionType: "pk_vote",
-      target: pkCandidates[randomIndex],
-    };
-  }
-
-  /**
-   * 处理跳过
-   */
-  static handleSkip() {
-    return {
-      actionType: "skip",
-    };
   }
 }

@@ -1,187 +1,152 @@
 """
-决策策略 - 根据游戏状态决定行动
+游戏策略
+
+根据不同的角色和阶段做出决策
 """
-import random
-from typing import Dict, Any, Optional, List
+import json
+import re
+from typing import Dict, Any, Optional
+
+try:
+    from .llm_client import LLMClient
+    from .context_builder import build_llm_messages
+except ImportError:
+    from llm_client import LLMClient
+    from context_builder import build_llm_messages
 
 
-class Strategy:
-    """决策策略类"""
-    
-    @staticmethod
-    def decide_action(game_status: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+class GameStrategy:
+    """游戏策略类"""
+
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        """
+        初始化策略
+
+        Args:
+            config: 配置选项
+                - playerIndex: 玩家位置编号
+                - playerRole: 玩家角色
+                - task: 任务信息（如果有）
+                - apiKey: LLM API Key
+                - modelName: LLM 模型名称
+                - apiUrl: LLM API 地址
+        """
+        config = config or {}
+        self.player_index = config.get("playerIndex")
+        self.player_role = config.get("playerRole")
+        self.task = config.get("task")
+        self.api_key = config.get("apiKey")
+        self.model_name = config.get("modelName")
+        self.api_url = config.get("apiUrl")
+
+        # 如果配置了 API Key，创建 LLM 客户端
+        if self.api_key:
+            self.llm_client = LLMClient(
+                {
+                    "apiKey": self.api_key,
+                    "modelName": self.model_name,
+                    "apiUrl": self.api_url,
+                }
+            )
+            print(f"[策略] LLM 客户端已初始化: {self.model_name}")
+        else:
+            print("[策略] ⚠ 未配置 LLM_API_KEY，将使用随机策略")
+            self.llm_client = None
+
+    async def decide_action(self, game_status: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         根据游戏状态决定行动
-        
+
         Args:
-            game_status: 游戏状态数据
-        
+            game_status: 游戏状态
+
         Returns:
-            行动数据字典，如果不需要行动则返回 None
+            行动数据，如果不需要行动返回 None
         """
-        my_turn = game_status.get('myTurn')
-        if not my_turn or not my_turn.get('canAct'):
+        my_turn = game_status.get("myTurn", {})
+
+        if not my_turn.get("canAct"):
             return None
-        
-        action_type = my_turn.get('actionType')
-        action_context = my_turn.get('actionContext', {})
-        alive_player_indexes = game_status.get('alivePlayerIndexes', [])
-        
-        handlers = {
-            'kill': lambda: Strategy.handle_kill(action_context, alive_player_indexes),
-            'check': lambda: Strategy.handle_check(action_context),
-            'witch_action': lambda: Strategy.handle_witch_action(action_context, game_status),
-            'last_words': lambda: Strategy.handle_last_words(),
-            'speech': lambda: Strategy.handle_speech(game_status),
-            'vote': lambda: Strategy.handle_vote(action_context),
-            'pk_speech': lambda: Strategy.handle_pk_speech(action_context),
-            'pk_vote': lambda: Strategy.handle_pk_vote(action_context),
-            'skip': lambda: Strategy.handle_skip(),
-        }
-        
-        handler = handlers.get(action_type)
-        if handler:
-            return handler()
-        else:
-            print(f'Unknown action type: {action_type}')
+
+        action_type = my_turn.get("actionType")
+        action_context = my_turn.get("actionContext", {})
+
+        print(f"[策略] 角色: {self.player_role}, 行动类型: {action_type}")
+
+        try:
+            return self.decide_with_llm(game_status, action_context)
+        except Exception as error:
+            print(f"[策略] LLM 决策失败: {str(error)}")
+            # 这里可以进行一定的兜底逻辑，比如随机策略等
             return None
-    
-    @staticmethod
-    def handle_kill(action_context: Dict[str, Any], alive_player_indexes: List[int]) -> Dict[str, Any]:
-        """处理狼人杀人"""
-        available_targets = action_context.get('availableTargets', [])
-        teammates = action_context.get('teammates', [])
-        
-        # 随机选择一个非狼人玩家
-        non_wolf_players = [idx for idx in available_targets if idx not in teammates]
-        
-        if not non_wolf_players:
-            # 如果没有非狼人玩家，随机选择一个
-            target = random.choice(available_targets) if available_targets else None
-        else:
-            target = random.choice(non_wolf_players)
-        
-        return {
-            'actionType': 'kill',
-            'target': target,
-        }
-    
-    @staticmethod
-    def handle_check(action_context: Dict[str, Any]) -> Dict[str, Any]:
-        """处理预言家验人"""
-        available_targets = action_context.get('availableTargets', [])
-        
-        if not available_targets:
+
+    def decide_with_llm(
+        self, game_status: Dict[str, Any], action_context: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        使用 LLM 进行决策
+
+        Args:
+            game_status: 游戏状态
+            action_context: 行动上下文
+
+        Returns:
+            行动数据
+        """
+        print("[策略] 🤖 使用 LLM 进行决策...")
+
+        # 构建 LLM 消息
+        messages = build_llm_messages(game_status, action_context, self.task)
+
+        # 调用 LLM
+        response = self.llm_client.chat(messages)
+
+        # 解析 LLM 响应
+        action = self.parse_llm_response(response, action_context.get("actionType"))
+
+        if not action:
+            raise Exception("无法解析 LLM 响应")
+
+        print(f"[策略] ✓ LLM 决策完成: {json.dumps(action, ensure_ascii=False, indent=2)}")
+        return action
+
+    def parse_llm_response(self, response: str, expected_action_type: str) -> Optional[Dict[str, Any]]:
+        """
+        解析 LLM 响应
+
+        Args:
+            response: LLM 响应文本
+            expected_action_type: 期望的行动类型
+
+        Returns:
+            解析后的行动对象
+        """
+        try:
+            # 尝试提取 JSON
+            json_str = response.strip()
+
+            # 如果响应包含代码块，提取 JSON
+            json_match = re.search(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", json_str)
+            if json_match:
+                json_str = json_match.group(1)
+            else:
+                # 尝试直接查找 JSON 对象
+                json_obj_match = re.search(r"\{[\s\S]*\}", json_str)
+                if json_obj_match:
+                    json_str = json_obj_match.group(0)
+
+            parsed = json.loads(json_str)
+
+            # 验证 actionType
+            if parsed.get("actionType") != expected_action_type:
+                print(
+                    f"[策略] ⚠ LLM 返回的 actionType ({parsed.get('actionType')}) 与期望的 ({expected_action_type}) 不匹配，使用期望的类型"
+                )
+                parsed["actionType"] = expected_action_type
+
+            return parsed
+        except Exception as error:
+            print(f"[策略] ❌ 解析 LLM 响应失败: {str(error)}")
+            print(f"[策略] 原始响应: {response[:500]}")
             return None
-        
-        target = random.choice(available_targets)
-        return {
-            'actionType': 'check',
-            'target': target,
-        }
-    
-    @staticmethod
-    def handle_witch_action(action_context: Dict[str, Any], game_status: Dict[str, Any]) -> Dict[str, Any]:
-        """处理女巫行动"""
-        killed_player = action_context.get('killedPlayer')
-        has_heal_potion = action_context.get('hasHealPotion', False)
-        has_poison_potion = action_context.get('hasPoisonPotion', False)
-        available_poison_targets = action_context.get('availablePoisonTargets', [])
-        
-        # 如果有人被杀且有解药，优先救人
-        if killed_player and has_heal_potion:
-            return {
-                'actionType': 'witch_action',
-                'action': 'heal',
-            }
-        
-        # 如果有毒药，随机毒一个人（简单策略）
-        if has_poison_potion and available_poison_targets:
-            target = random.choice(available_poison_targets)
-            return {
-                'actionType': 'witch_action',
-                'action': 'poison',
-                'target': target,
-            }
-        
-        # 否则跳过
-        return {
-            'actionType': 'witch_action',
-            'action': 'skip',
-        }
-    
-    @staticmethod
-    def handle_last_words() -> Dict[str, Any]:
-        """处理遗言"""
-        return {
-            'actionType': 'last_words',
-            'content': '我是好人，过。',
-        }
-    
-    @staticmethod
-    def handle_speech(game_status: Dict[str, Any]) -> Dict[str, Any]:
-        """处理发言"""
-        my_role = game_status.get('myRole')
-        my_player_index = game_status.get('myPlayerIndex')
-        
-        if my_role == 'WEREWOLF':
-            content = f'我是{my_player_index}号，我是好人，过。'
-        else:
-            content = f'我是{my_player_index}号，我是好人，请大家相信我。'
-        
-        return {
-            'actionType': 'speech',
-            'content': content,
-        }
-    
-    @staticmethod
-    def handle_vote(action_context: Dict[str, Any]) -> Dict[str, Any]:
-        """处理投票"""
-        available_targets = action_context.get('availableTargets', [])
-        
-        if not available_targets:
-            return {
-                'actionType': 'vote',
-                'target': None,  # 弃票
-            }
-        
-        target = random.choice(available_targets)
-        return {
-            'actionType': 'vote',
-            'target': target,
-        }
-    
-    @staticmethod
-    def handle_pk_speech(action_context: Dict[str, Any]) -> Dict[str, Any]:
-        """处理 PK 发言"""
-        pk_candidates = action_context.get('pkCandidates', [])
-        candidates_str = '号、'.join(map(str, pk_candidates))
-        return {
-            'actionType': 'pk_speech',
-            'content': f'我认为{candidates_str}号中可能有狼人，请大家仔细分析。',
-        }
-    
-    @staticmethod
-    def handle_pk_vote(action_context: Dict[str, Any]) -> Dict[str, Any]:
-        """处理 PK 投票"""
-        pk_candidates = action_context.get('pkCandidates', [])
-        
-        if not pk_candidates:
-            return {
-                'actionType': 'pk_vote',
-                'target': None,
-            }
-        
-        target = random.choice(pk_candidates)
-        return {
-            'actionType': 'pk_vote',
-            'target': target,
-        }
-    
-    @staticmethod
-    def handle_skip() -> Dict[str, Any]:
-        """处理跳过"""
-        return {
-            'actionType': 'skip',
-        }
 
