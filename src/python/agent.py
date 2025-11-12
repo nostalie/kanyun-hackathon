@@ -41,8 +41,35 @@ class PlayerAgent:
         self.is_running = False
         self.last_action_time = None
     
+    def print_environment_variables(self):
+        """打印环境变量"""
+        print("=" * 60)
+        print("[PlayerAgent] Environment Variables:")
+        print("=" * 60)
+        print(f"  WEREWOLF_GAME_ID:      {os.getenv('WEREWOLF_GAME_ID', '(not set)')}")
+        print(f"  WEREWOLF_PLAYER_ID:    {os.getenv('WEREWOLF_PLAYER_ID', '(not set)')}")
+        print(f"  WEREWOLF_PLAYER_INDEX: {os.getenv('WEREWOLF_PLAYER_INDEX', '(not set)')}")
+        print(f"  WEREWOLF_API_BASE_URL: {os.getenv('WEREWOLF_API_BASE_URL', '(not set)')}")
+        
+        # Token 只显示前20个字符，保护敏感信息
+        token = os.getenv('WEREWOLF_GAME_TOKEN', '(not set)')
+        if token != '(not set)' and len(token) > 20:
+            token_display = f"{token[:20]}... ({len(token)} chars)"
+        else:
+            token_display = token
+        print(f"  WEREWOLF_GAME_TOKEN:    {token_display}")
+        print(f"  PLAYER_ROLE:            {os.getenv('PLAYER_ROLE', '(not set)')}")
+        print(f"  PLAYER_TASK_TYPE:       {os.getenv('PLAYER_TASK_TYPE', '(not set)')}")
+        print(f"  PLAYER_TASK_NAME:       {os.getenv('PLAYER_TASK_NAME', '(not set)')}")
+        print(f"  PLAYER_TASK_DESCRIPTION: {os.getenv('PLAYER_TASK_DESCRIPTION', '(not set)')}")
+        print(f"  PLAYER_TASK_REWARD:     {os.getenv('PLAYER_TASK_REWARD', '(not set)')}")
+        print("=" * 60)
+    
     def start(self):
         """启动 Agent"""
+        # 打印环境变量
+        self.print_environment_variables()
+        
         print(f'[PlayerAgent] Starting agent for game {self.game_id}, player {self.player_id} (index: {self.player_index})')
         
         try:

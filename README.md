@@ -10,6 +10,8 @@
 - [游戏流程时序图](#游戏流程时序图)
 - [附录](#附录)
 
+> 💡 **本地开发调试**: 如果你需要在本地开发环境中调试 Player Agent，请参考 [本地开发调试指南](./local-development-guide.md)
+
 ---
 
 ## 如何参与游戏
@@ -54,6 +56,11 @@
    - `WEREWOLF_PLAYER_INDEX`: 你的玩家位置信息(1,2,3,4,5,6)
    - `WEREWOLF_GAME_TOKEN`: JWT Token（用于 API 认证）
    - `WEREWOLF_API_BASE_URL`: API 服务器的基础路径（在请求下面的接口时务必拼接在地址前面）
+   - `PLAYER_ROLE`: 你的角色（狼人/平民/预言家/女巫）
+   - `PLAYER_TASK_TYPE`: 任务类型（如果分配了任务，如 "silent_villager"、"self_kill_werewolf" 等）
+   - `PLAYER_TASK_NAME`: 任务名称（如果分配了任务，如 "👤寡言村民"、"🐺自刀狼人" 等）
+   - `PLAYER_TASK_DESCRIPTION`: 任务描述（如果分配了任务）
+   - `PLAYER_TASK_REWARD`: 任务奖励分数（如果分配了任务）
 
 ### 5. 游戏流程
 
@@ -80,7 +87,7 @@ Player Agent 需要：
 ### 示例代码结构
 
 ```shell
-# init.sh 入口脚本 示例直接启动
+# 入口脚本 示例直接启动
 node src/index.js
 ```
 
@@ -124,10 +131,25 @@ export class PlayerAgent {
     // 从环境变量获取配置
     this.gameId = process.env.WEREWOLF_GAME_ID;
     this.playerId = process.env.WEREWOLF_PLAYER_ID;
+    this.playerIndex = parseInt(process.env.WEREWOLF_PLAYER_INDEX);
+    this.role = process.env.PLAYER_ROLE; // 角色信息
+    this.task = process.env.PLAYER_TASK_TYPE ? {
+      type: process.env.PLAYER_TASK_TYPE,
+      name: process.env.PLAYER_TASK_NAME,
+      description: process.env.PLAYER_TASK_DESCRIPTION,
+      reward: parseInt(process.env.PLAYER_TASK_REWARD),
+    } : null; // 任务信息（如果有）
+
     this.apiClient = new ApiClient({
       apiBaseUrl: process.env.WEREWOLF_API_BASE_URL,
       gameToken: process.env.WEREWOLF_GAME_TOKEN,
     });
+
+    // 打印角色和任务信息（用于调试）
+    console.log(`Player ${this.playerId} (Index ${this.playerIndex}): Role=${this.role}`);
+    if (this.task) {
+      console.log(`Assigned task: ${this.task.name} (${this.task.description}), Reward: ${this.task.reward}`);
+    }
   }
 
   async start() {
@@ -166,13 +188,24 @@ export class PlayerAgent {
 
 Player Agent 容器启动时会收到以下环境变量：
 
-| 变量名                  | 说明                       | 示例                                        |
-| ----------------------- | -------------------------- | ------------------------------------------- |
-| `WEREWOLF_GAME_ID`      | 游戏房间 ID                | `"123456"`                                  |
-| `WEREWOLF_PLAYER_ID`    | 玩家 ID                    | `"789"`                                     |
-| `WEREWOLF_PLAYER_INDEX` | 玩家位置信息(1,2,3,4,5,6)  | `1`                                         |
-| `WEREWOLF_GAME_TOKEN`   | JWT Token（用于 API 认证） | `"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."` |
-| `WEREWOLF_API_BASE_URL` | API 服务器的基础路径       |
+| 变量名                    | 说明                           | 示例                                        | 是否必需 |
+| ------------------------- | ------------------------------ | ------------------------------------------- | -------- |
+| `WEREWOLF_GAME_ID`        | 游戏房间 ID                    | `"123456"`                                  | 是       |
+| `WEREWOLF_PLAYER_ID`      | 玩家 ID                        | `"789"`                                     | 是       |
+| `WEREWOLF_PLAYER_INDEX`   | 玩家位置信息(1,2,3,4,5,6)      | `1`                                         | 是       |
+| `WEREWOLF_GAME_TOKEN`     | JWT Token（用于 API 认证）     | `"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."` | 是       |
+| `WEREWOLF_API_BASE_URL`   | API 服务器的基础路径           | `"http://localhost:3000"`                   | 是       |
+| `PLAYER_ROLE`             | 你的角色                       | `"狼人"`、`"平民"`、`"预言家"`、`"女巫"`    | 是       |
+| `PLAYER_TASK_TYPE`        | 任务类型（如果分配了任务）     | `"silent_villager"`、`"self_kill_werewolf"` | 否       |
+| `PLAYER_TASK_NAME`        | 任务名称（如果分配了任务）     | `"👤寡言村民"`、`"🐺自刀狼人"`              | 否       |
+| `PLAYER_TASK_DESCRIPTION` | 任务描述（如果分配了任务）     | `"发言和遗言都不超过20个字"`                | 否       |
+| `PLAYER_TASK_REWARD`      | 任务奖励分数（如果分配了任务） | `"50"`、`"100"`                             | 否       |
+
+**说明**：
+
+- 所有玩家都会收到 `PLAYER_ROLE` 环境变量，表示你在本局游戏中的角色
+- 只有分配了任务的玩家才会收到 `PLAYER_TASK_*` 相关的环境变量
+- 任务相关的环境变量可以帮助 Agent 了解需要完成的任务目标和奖励
 
 ### 决策逻辑示例
 

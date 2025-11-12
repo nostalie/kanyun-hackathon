@@ -28,9 +28,67 @@ export class PlayerAgent {
   }
 
   /**
+   * 打印环境变量
+   */
+  printEnvironmentVariables() {
+    console.log("=".repeat(60));
+    console.log("[PlayerAgent] Environment Variables:");
+    console.log("=".repeat(60));
+    console.log(
+      `  WEREWOLF_GAME_ID:      ${process.env.WEREWOLF_GAME_ID || "(not set)"}`
+    );
+    console.log(
+      `  WEREWOLF_PLAYER_ID:    ${
+        process.env.WEREWOLF_PLAYER_ID || "(not set)"
+      }`
+    );
+    console.log(
+      `  WEREWOLF_PLAYER_INDEX: ${
+        process.env.WEREWOLF_PLAYER_INDEX || "(not set)"
+      }`
+    );
+    console.log(
+      `  WEREWOLF_API_BASE_URL: ${
+        process.env.WEREWOLF_API_BASE_URL || "(not set)"
+      }`
+    );
+
+    // Token 只显示前20个字符，保护敏感信息
+    const token = process.env.WEREWOLF_GAME_TOKEN || "(not set)";
+    const tokenDisplay =
+      token !== "(not set)" && token.length > 20
+        ? `${token.substring(0, 20)}... (${token.length} chars)`
+        : token;
+    console.log(`  WEREWOLF_GAME_TOKEN:    ${tokenDisplay}`);
+    console.log(
+      `  PLAYER_ROLE:            ${process.env.PLAYER_ROLE || "(not set)"}`
+    );
+    console.log(
+      `  PLAYER_TASK_TYPE:       ${process.env.PLAYER_TASK_TYPE || "(not set)"}`
+    );
+    console.log(
+      `  PLAYER_TASK_NAME:       ${process.env.PLAYER_TASK_NAME || "(not set)"}`
+    );
+    console.log(
+      `  PLAYER_TASK_DESCRIPTION: ${
+        process.env.PLAYER_TASK_DESCRIPTION || "(not set)"
+      }`
+    );
+    console.log(
+      `  PLAYER_TASK_REWARD:     ${
+        process.env.PLAYER_TASK_REWARD || "(not set)"
+      }`
+    );
+    console.log("=".repeat(60));
+  }
+
+  /**
    * 启动 Agent
    */
   async start() {
+    // 打印环境变量
+    this.printEnvironmentVariables();
+
     console.log(
       `[PlayerAgent] Starting agent for game ${this.gameId}, player ${this.playerId} (index: ${this.playerIndex})`
     );
