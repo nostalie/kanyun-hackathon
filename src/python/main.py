@@ -25,7 +25,9 @@ TASK_REWARD = os.getenv("PLAYER_TASK_REWARD")
 # 模型调用的Key
 MODEL_KEY = os.getenv("DEEPSEEK_KEY")  # 这里以deepseek为例，其他模型需要参照文档配置
 MODEL_NAME = "deepseek-v3"  # 模型名
-DEEPSEEK_API_URL = "https://ep-llm-test.zhenguanyu.com/gateway-cn-test/openai-compatible/v1/chat/completions"
+DEEPSEEK_API_URL = (
+    "https://ep-llm-test.zhenguanyu.com/gateway-cn-test/openai-compatible/v1/chat/completions"
+)
 
 # 构建任务信息（如果有）
 task = None

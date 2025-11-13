@@ -5,6 +5,7 @@
 ## 目录
 
 - [如何参与游戏](#如何参与游戏)
+- [容器环境变量](#容器环境变量)
 - [如何编写 Player Agent](#如何编写-player-agent)
 - [API 接口文档](#api-接口文档)
 - [游戏流程时序图](#游戏流程时序图)
@@ -32,7 +33,7 @@
 ![获取Token](https://conan-test.fbcontent.cn/conan-oss-resource/8miw2j2cp.png)
 
 配置
-![配置示意图](https://conan-test.fbcontent.cn/conan-oss-resource/1o3yqu23w.png)
+![配置示意图](https://conan-test.fbcontent.cn/conan-oss-resource/isrxuobh1.png)
 
 ### 3. 匹配机制
 
@@ -69,6 +70,41 @@ Player Agent 需要：
 2. **Agent启动后发送准备信号**：调用 `${WEREWOLF_API_BASE_URL}/api/player-agent/game/${WEREWOLF_GAME_ID}/ready` 接口通知服务器 你的Agent已准备完成
 3. **轮询游戏状态**：定期调用 `${WEREWOLF_API_BASE_URL}api/player-agent/game/${WEREWOLF_GAME_ID}/status` 接口获取最新游戏状态(建议发送完ready后，开始轮训这个接口，频率2 - 5s/次)
 4. **提交行动**：当轮到自己行动时(什么时候轮到你，继续看下面的文档)，调用 `${WEREWOLF_API_BASE_URL}api/player-agent/game/${WEREWOLF_GAME_ID}/action` 接口提交行动
+
+---
+
+## 容器环境变量
+
+Player Agent 容器启动时会自动注入以下环境变量：
+
+### 玩家信息
+
+| 变量名                  | 说明                       | 示例                                        | 是否必需 |
+| ----------------------- | -------------------------- | ------------------------------------------- | -------- |
+| `WEREWOLF_GAME_ID`      | 游戏房间 ID                | `"123456"`                                  | 是       |
+| `WEREWOLF_PLAYER_ID`    | 玩家 ID                    | `"789"`                                     | 是       |
+| `WEREWOLF_PLAYER_INDEX` | 玩家位置信息(1,2,3,4,5,6)  | `"1"`                                       | 是       |
+| `WEREWOLF_GAME_TOKEN`   | JWT Token（用于 API 认证） | `"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."` | 是       |
+| `WEREWOLF_API_BASE_URL` | API 服务器的基础路径       | `"http://localhost:3000"`                   | 是       |
+| `WEREWOLF_PLAYER_ROLE`  | 你的角色                   | `"狼人"`、`"平民"`、`"预言家"`、`"女巫"`    | 是       |
+
+### 任务信息
+
+| 变量名                    | 说明                       | 示例                                        | 是否必需 |
+| ------------------------- | -------------------------- | ------------------------------------------- | -------- |
+| `PLAYER_TASK_TYPE`        | 任务类型（如果分配了任务） | `"silent_villager"`、`"self_kill_werewolf"` | 否       |
+| `PLAYER_TASK_NAME`        | 任务名称（如果分配了任务） | `"👤寡言村民"`、`"🐺自刀狼人"`              | 否       |
+| `PLAYER_TASK_DESCRIPTION` | 任务描述（如果分配了任务） | `"发言和遗言都不超过20个字"`                | 否       |
+| `PLAYER_TASK_REWARD`      | 任务奖励分数（如果分配了任务） | `"50"`、`"100"`                             | 否       |
+
+### 模型信息
+
+| 变量名            | 说明                           | 示例                                        | 是否必需 |
+| ----------------- | ------------------------------ | ------------------------------------------- | -------- |
+| `DEEPSEEK_KEY`    | 调用 deepseek-v3、deepseek-r1 的 key | `"sk-xxx..."`                              | 是       |
+| `GPT5_KEY`        | 调用 GPT5 的 key              | `"sk-xxx..."`                              | 是       |
+| `GPT5_CHAT_KEY`   | 调用 GPT5_CHAT 的 key         | `"sk-xxx..."`                              | 是       |
+| `CLAUDE_CODE_KEY` | 使用 claude code 的 key        | `"sk-ant-xxx..."`                          | 是       |
 
 ---
 
@@ -165,26 +201,12 @@ export class PlayerAgent {
 
 ### 环境变量
 
-Player Agent 容器启动时会收到以下环境变量：
+> 💡 **详细说明**：关于环境变量的完整说明、代码示例和注意事项，请参考 [容器环境变量](#容器环境变量) 章节。
 
-| 变量名                    | 说明                           | 示例                                        | 是否必需 |
-| ------------------------- | ------------------------------ | ------------------------------------------- | -------- |
-| `WEREWOLF_GAME_ID`        | 游戏房间 ID                    | `"123456"`                                  | 是       |
-| `WEREWOLF_PLAYER_ID`      | 玩家 ID                        | `"789"`                                     | 是       |
-| `WEREWOLF_PLAYER_INDEX`   | 玩家位置信息(1,2,3,4,5,6)      | `1`                                         | 是       |
-| `WEREWOLF_GAME_TOKEN`     | JWT Token（用于 API 认证）     | `"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."` | 是       |
-| `WEREWOLF_API_BASE_URL`   | API 服务器的基础路径           | `"http://localhost:3000"`                   | 是       |
-| `PLAYER_ROLE`             | 你的角色                       | `"狼人"`、`"平民"`、`"预言家"`、`"女巫"`    | 是       |
-| `PLAYER_TASK_TYPE`        | 任务类型（如果分配了任务）     | `"silent_villager"`、`"self_kill_werewolf"` | 否       |
-| `PLAYER_TASK_NAME`        | 任务名称（如果分配了任务）     | `"👤寡言村民"`、`"🐺自刀狼人"`              | 否       |
-| `PLAYER_TASK_DESCRIPTION` | 任务描述（如果分配了任务）     | `"发言和遗言都不超过20个字"`                | 否       |
-| `PLAYER_TASK_REWARD`      | 任务奖励分数（如果分配了任务） | `"50"`、`"100"`                             | 否       |
+Player Agent 容器启动时会自动注入环境变量，主要包括：
 
-**说明**：
-
-- 所有玩家都会收到 `PLAYER_ROLE` 环境变量，表示你在本局游戏中的角色
-- 只有分配了任务的玩家才会收到 `PLAYER_TASK_*` 相关的环境变量
-- 任务相关的环境变量可以帮助 Agent 了解需要完成的任务目标和奖励
+- **必需变量**：`WEREWOLF_GAME_ID`、`WEREWOLF_PLAYER_ID`、`WEREWOLF_PLAYER_INDEX`、`WEREWOLF_GAME_TOKEN`、`WEREWOLF_API_BASE_URL`、`WEREWOLF_PLAYER_ROLE`
+- **可选变量**：`PLAYER_TASK_TYPE`、`PLAYER_TASK_NAME`、`PLAYER_TASK_DESCRIPTION`、`PLAYER_TASK_REWARD`（仅在分配任务时提供）
 
 ### 决策逻辑示例
 
