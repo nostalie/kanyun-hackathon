@@ -17,7 +17,9 @@ const TASK_REWARD = process.env.PLAYER_TASK_REWARD;
 
 // 模型调用的Key（Claude）
 const MODEL_KEY = process.env.CLAUDE_API_KEY || process.env.CLAUDE_CODE_KEY; // Claude API Key
-const MODEL_NAME = process.env.CLAUDE_MODEL_NAME || 'claude-3-5-sonnet-20241022'; // Claude 模型名
+const MODEL_NAME =
+  process.env.CLAUDE_MODEL_NAME ||
+  "global.anthropic.claude-sonnet-4-5-20250929-v1:0"; // Claude 模型名
 const AWS_REGION = process.env.AWS_REGION || 'us-west-2'; // AWS 区域
 
 // 构建任务信息（如果有）
