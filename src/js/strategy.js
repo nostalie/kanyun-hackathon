@@ -4,7 +4,7 @@
  * 根据不同的角色和阶段做出决策
  */
 
-import { ClaudeClient } from "./claude-client.js";
+import { LLMClient } from "./llm-client.js";
 import { buildLLMMessages } from "./context-builder.js";
 
 /**
@@ -15,7 +15,7 @@ export class GameStrategy {
    * @param {Object} [config] - 配置选项
    * @param {string} [config.apiKey] - LLM API Key
    * @param {string} [config.modelName] - LLM 模型名称
-   * @param {string} [config.awsRegion] - AWS 区域（Claude 使用）
+   * @param {string} [config.apiUrl] - LLM API 地址
    */
   constructor(config = {}) {
     this.playerIndex = config.playerIndex;
@@ -23,14 +23,14 @@ export class GameStrategy {
     this.task = config.task;
     this.apiKey = config.apiKey;
     this.modelName = config.modelName;
-    this.awsRegion = config.awsRegion;
+    this.apiUrl = config.apiUrl;
 
     // 如果配置了 API Key，创建 LLM 客户端
     if (this.apiKey) {
-      this.llmClient = new ClaudeClient({
+      this.llmClient = new LLMClient({
         apiKey: this.apiKey,
         modelName: this.modelName,
-        awsRegion: this.awsRegion || "us-west-2",
+        apiUrl: this.apiUrl,
       });
       console.log(`[策略] LLM 客户端已初始化: ${this.modelName}`);
     } else {
