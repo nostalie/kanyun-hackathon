@@ -7,6 +7,16 @@
 USE_PYTHON=${USE_PYTHON:-false}
 
 echo "Starting Python Player Agent..."
+
+# 检查并安装 Python 依赖
+if [ -f "requirements.txt" ]; then
+    echo "Installing Python dependencies..."
+    pip3 install -r requirements.txt --quiet --disable-pip-version-check
+    if [ $? -ne 0 ]; then
+        echo "Warning: Failed to install some dependencies. Continuing anyway..."
+    fi
+fi
+
 cd src/python
 python main.py
 
