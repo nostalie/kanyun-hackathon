@@ -61,6 +61,23 @@ export class ClaudeClient {
     // 配置代理（如果提供了）
     this.proxy = config.httpsProxy || config.httpProxy || null;
 
+    // 设置环境变量以便 Node.js fetch 使用代理
+    // Node.js 18+ 的原生 fetch 会自动读取这些环境变量
+    if (
+      config.httpsProxy &&
+      !process.env.HTTPS_PROXY &&
+      !process.env.https_proxy
+    ) {
+      process.env.HTTPS_PROXY = config.httpsProxy;
+    }
+    if (
+      config.httpProxy &&
+      !process.env.HTTP_PROXY &&
+      !process.env.http_proxy
+    ) {
+      process.env.HTTP_PROXY = config.httpProxy;
+    }
+
     console.log("✓ 已初始化Claude Client (直接调用 AWS Bedrock API)");
     console.log(`  模型: ${this.modelName}`);
     console.log(`  AWS Region: ${this.awsRegion}`);

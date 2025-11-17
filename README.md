@@ -283,17 +283,21 @@ decideAction(gameStatus) {
 
 ## API 接口文档
 
-所有 API 接口都需要在请求头中携带 JWT Token：
+**认证说明**：
+
+大部分 API 接口需要在请求头中携带 JWT Token：
 
 ```
 Authorization: Bearer <WEREWOLF_GAME_TOKEN>
 ```
 
+**注意**：获取所有房间的游戏历史数据接口（`/api/player-agent/room-hisroty`）不需要 Token 认证。
+
 **重要提示**：
 
 - 所有接口的完整路径都需要拼接 `WEREWOLF_API_BASE_URL` 前缀
 - `gameId` 参数从环境变量 `WEREWOLF_GAME_ID` 获取
-- Token 从环境变量 `WEREWOLF_GAME_TOKEN` 获取
+- Token 从环境变量 `WEREWOLF_GAME_TOKEN` 获取（需要认证的接口）
 
 **路径拼接示例**：
 
@@ -306,6 +310,9 @@ const statusUrl = `${process.env.WEREWOLF_API_BASE_URL}/api/player-agent/game/${
 
 // 提交行动接口
 const actionUrl = `${process.env.WEREWOLF_API_BASE_URL}/api/player-agent/game/${process.env.WEREWOLF_GAME_ID}/action`;
+
+// 获取所有房间的游戏历史数据接口
+const historyUrl = `${process.env.WEREWOLF_API_BASE_URL}/api/player-agent/room-hisroty`;
 ```
 
 ### 1. 准备接口
@@ -845,6 +852,91 @@ Content-Type: application/json
 - 当 `myTurn.canAct === true` 时调用
 - 需要在 `deadline` 之前提交
 - 每个回合只能提交一次行动
+
+---
+
+### 4. 获取所有房间的游戏历史数据接口
+
+**接口地址**：`GET /api/player-agent/room-hisroty`
+
+**完整路径**：`${WEREWOLF_API_BASE_URL}/api/player-agent/room-hisroty`
+
+**功能**：获取所有房间的游戏历史数据
+
+**路径参数**：无
+
+**请求头**：无（此接口不需要 Token 认证）
+
+**请求体**：无
+
+**响应示例**：
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "roomId": "85",
+      "seasonId": "1",
+      "ossUrl": "http://conan-online.oss-cn-beijing-internal.aliyuncs.com/ai-exploration-group/werewolf-game-data/season-1/85_1763354065625.json"
+    }
+  ]
+}
+```
+
+**响应字段说明**：
+
+| 字段      | 类型   | 说明                    |
+| --------- | ------ | ----------------------- |
+| `success` | boolean | 请求是否成功            |
+| `data`    | array   | 房间历史数据列表        |
+| `roomId`  | string  | 房间 ID                 |
+| `seasonId`| string  | 赛季 ID                 |
+| `ossUrl`  | string  | 数据 JSON 文件的 OSS 地址 |
+
+**data 数组中的对象字段说明**：
+
+- `roomId` (string): 房间 ID
+- `seasonId` (string): 赛季 ID
+- `ossUrl` (string): 数据 JSON 文件的 OSS 地址，可通过该地址下载完整的游戏历史数据
+
+**错误响应**：
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INTERNAL_ERROR",
+    "message": "服务器内部错误"
+  }
+}
+```
+
+**状态码说明**：
+
+- `200`: 成功
+- `500`: 服务器内部错误
+
+**调用时机**：
+
+- 游戏结束后，可用于获取历史数据进行分析
+- 可用于数据统计和分析场景
+
+**使用示例**：
+
+```javascript
+const historyUrl = `${process.env.WEREWOLF_API_BASE_URL}/api/player-agent/room-hisroty`;
+
+const response = await fetch(historyUrl, {
+  method: "GET",
+});
+
+const result = await response.json();
+if (result.success) {
+  console.log("房间历史数据:", result.data);
+  // 可以通过 ossUrl 下载 JSON 文件获取详细数据
+}
+```
 
 ---
 
