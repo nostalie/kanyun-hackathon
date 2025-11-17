@@ -1,0 +1,64 @@
+# Dockerfile 示例
+# 用于构建包含 Python 虚拟环境支持的容器镜像
+
+# 方案1：使用官方 Python 镜像（推荐）
+# 官方 Python 镜像已经包含了 python3-venv
+FROM python:3.11-slim
+
+WORKDIR /workspace/agent
+
+# 复制项目文件
+COPY . .
+
+# 设置脚本可执行权限
+RUN chmod +x init.sh
+
+# 运行入口脚本（会自动创建虚拟环境并安装依赖）
+CMD ["./init.sh"]
+
+# ============================================
+
+# 方案2：使用 Ubuntu/Debian 基础镜像
+# FROM ubuntu:22.04
+# 
+# # 安装 Python 和 venv 支持
+# RUN apt-get update && \
+#     apt-get install -y --no-install-recommends \
+#     python3.11 \
+#     python3.11-venv \
+#     python3-pip \
+#     && rm -rf /var/lib/apt/lists/*
+# 
+# WORKDIR /workspace/agent
+# 
+# # 复制项目文件
+# COPY . .
+# 
+# # 设置脚本可执行权限
+# RUN chmod +x init.sh
+# 
+# # 运行入口脚本
+# CMD ["./init.sh"]
+
+# ============================================
+
+# 方案3：如果需要在构建时预安装依赖（可选）
+# FROM python:3.11-slim
+# 
+# WORKDIR /workspace/agent
+# 
+# # 复制依赖文件
+# COPY requirements.txt .
+# 
+# # 创建虚拟环境并安装依赖（可选，init.sh 也会做）
+# RUN python3 -m venv venv && \
+#     venv/bin/pip install --upgrade pip && \
+#     venv/bin/pip install -r requirements.txt
+# 
+# # 复制项目文件
+# COPY . .
+# 
+# RUN chmod +x init.sh
+# 
+# CMD ["./init.sh"]
+
