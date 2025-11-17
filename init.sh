@@ -7,7 +7,7 @@ echo "Starting Python Player Agent..."
 
 # 激活虚拟环境
 echo "Activating virtual environment..."
-python -m venv venv
+python3 -m venv venv
 source venv/bin/activate
 
 pip install -r requirements.txt --quiet --disable-pip-version-check
