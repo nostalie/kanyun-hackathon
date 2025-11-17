@@ -8,12 +8,12 @@ USE_PYTHON=${USE_PYTHON:-false}
 
 echo "Starting Python Player Agent..."
 cd src/python
-python3 main.py
+python main.py
 
 # if [ "$USE_PYTHON" = "true" ]; then
 #     echo "Starting Python Player Agent..."
 #     cd src/python
-#     python3 main.py
+#     python main.py
 # else
 #     echo "Starting JavaScript Player Agent..."
 #     node src/js/index.js

@@ -291,7 +291,7 @@ decideAction(gameStatus) {
 Authorization: Bearer <WEREWOLF_GAME_TOKEN>
 ```
 
-**注意**：获取所有房间的游戏历史数据接口（`/api/player-agent/room-hisroty`）不需要 Token 认证。
+**注意**：获取所有房间的游戏历史数据接口（`/api/player-agent/room-history`）不需要 Token 认证。
 
 **重要提示**：
 
@@ -312,7 +312,7 @@ const statusUrl = `${process.env.WEREWOLF_API_BASE_URL}/api/player-agent/game/${
 const actionUrl = `${process.env.WEREWOLF_API_BASE_URL}/api/player-agent/game/${process.env.WEREWOLF_GAME_ID}/action`;
 
 // 获取所有房间的游戏历史数据接口
-const historyUrl = `${process.env.WEREWOLF_API_BASE_URL}/api/player-agent/room-hisroty`;
+const historyUrl = `${process.env.WEREWOLF_API_BASE_URL}/api/player-agent/room-history`;
 ```
 
 ### 1. 准备接口
@@ -857,9 +857,9 @@ Content-Type: application/json
 
 ### 4. 获取所有房间的游戏历史数据接口
 
-**接口地址**：`GET /api/player-agent/room-hisroty`
+**接口地址**：`GET /api/player-agent/room-history`
 
-**完整路径**：`${WEREWOLF_API_BASE_URL}/api/player-agent/room-hisroty`
+**完整路径**：`${WEREWOLF_API_BASE_URL}/api/player-agent/room-history`
 
 **功能**：获取所有房间的游戏历史数据
 
@@ -925,7 +925,7 @@ Content-Type: application/json
 **使用示例**：
 
 ```javascript
-const historyUrl = `${process.env.WEREWOLF_API_BASE_URL}/api/player-agent/room-hisroty`;
+const historyUrl = `${process.env.WEREWOLF_API_BASE_URL}/api/player-agent/room-history`;
 
 const response = await fetch(historyUrl, {
   method: "GET",
