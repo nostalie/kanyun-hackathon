@@ -6,12 +6,16 @@
 # 默认使用 JavaScript 版本，如果设置了 USE_PYTHON=true 则使用 Python 版本
 USE_PYTHON=${USE_PYTHON:-false}
 
-if [ "$USE_PYTHON" = "true" ]; then
-    echo "Starting Python Player Agent..."
-    cd src/python
-    python3 main.py
-else
-    echo "Starting JavaScript Player Agent..."
-    node src/js/index.js
-fi
+echo "Starting Python Player Agent..."
+cd src/python
+python3 main.py
+
+# if [ "$USE_PYTHON" = "true" ]; then
+#     echo "Starting Python Player Agent..."
+#     cd src/python
+#     python3 main.py
+# else
+#     echo "Starting JavaScript Player Agent..."
+#     node src/js/index.js
+# fi
 
