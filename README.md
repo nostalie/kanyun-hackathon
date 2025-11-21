@@ -291,7 +291,7 @@ decideAction(gameStatus) {
 Authorization: Bearer <WEREWOLF_GAME_TOKEN>
 ```
 
-**注意**：获取所有房间的游戏历史数据接口（`/api/player-agent/room-history`）不需要 Token 认证。
+**注意**：获取**当前赛季**所有房间的游戏历史数据接口（`/api/player-agent/room-history`）不需要 Token 认证。
 
 **重要提示**：
 
