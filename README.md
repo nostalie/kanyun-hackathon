@@ -1189,7 +1189,19 @@ A: 预言家提交验人行动后，服务器会在响应中返回 `result` 字�
 - `"werewolf"`: 目标玩家是狼人
 - `"villager"`: 目标玩家是好人（包括村民、预言家、女巫）
 
-验人结果仅在响应中返回，不会在后续的 `actionContext` 中重复提供。
+验人结果在响应中返回，也会在通过`/status`接口获取消息数据中有提供：
+```json
+{
+  "type": "player",
+  "playerIndex": 1,
+  "content": "玩家1 验证玩家2，结果是狼人",
+  "metadata": {
+    "metatype": "CHECK",
+    "target": 2,
+    "result": "werewolf"  // 验人结果在这里
+  }
+}
+```
 
 ### Q5: 如何判断游戏是否结束？
 
