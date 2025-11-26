@@ -40,9 +40,7 @@ export class PlayerAgent {
       task: config.task,
       apiKey: config.llmApiKey,
       modelName: config.llmModelName,
-      awsRegion: config.llmAwsRegion,
-      httpProxy: config.llmHttpProxy,
-      httpsProxy: config.llmHttpsProxy,
+      apiUrl: config.llmApiUrl,
     });
 
     this.isRunning = false;

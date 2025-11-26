@@ -15,16 +15,11 @@ const TASK_NAME = process.env.PLAYER_TASK_NAME;
 const TASK_DESCRIPTION = process.env.PLAYER_TASK_DESCRIPTION;
 const TASK_REWARD = process.env.PLAYER_TASK_REWARD;
 
-// 模型调用的Key（Claude）
-const MODEL_KEY = process.env.CLAUDE_API_KEY || process.env.CLAUDE_CODE_KEY; // Claude API Key
-const MODEL_NAME =
-  process.env.CLAUDE_MODEL_NAME ||
-  "global.anthropic.claude-sonnet-4-5-20250929-v1:0"; // Claude 模型名
-const AWS_REGION = process.env.AWS_REGION || "us-west-2"; // AWS 区域
-
-// 代理配置（Claude 使用）- 固定代理地址
-const HTTP_PROXY = "http://proxy.example.com:8080";
-const HTTPS_PROXY = "http://proxy.example.com:8080";
+// 模型调用的Key（DeepSeek）
+const MODEL_KEY = process.env.DEEPSEEK_KEY; // DeepSeek API Key
+const MODEL_NAME = "deepseek-v3"; // DeepSeek 模型名
+const DEEPSEEK_API_URL =
+  "https://ep-llm-test.zhenguanyu.com/gateway-cn-test/openai-compatible/v1/chat/completions";
 
 // 构建任务信息（如果有）
 const task = TASK_TYPE
@@ -65,9 +60,7 @@ async function main() {
       pollInterval: POLL_INTERVAL,
       llmApiKey: MODEL_KEY,
       llmModelName: MODEL_NAME,
-      llmAwsRegion: AWS_REGION,
-      llmHttpProxy: HTTP_PROXY,
-      llmHttpsProxy: HTTPS_PROXY,
+      llmApiUrl: DEEPSEEK_API_URL,
     });
 
     // 处理进程退出信号
